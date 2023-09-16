@@ -1,11 +1,14 @@
-import imaplib
 import email
+import imaplib
+import os
+from datetime import datetime
 from email.header import decode_header
-import requests
 from time import sleep
 from typing import Optional
-from datetime import datetime
-import os
+from zoneinfo import ZoneInfo
+
+import requests
+
 
 EMAIL_USERNAME = os.getenv("EMAIL_USERNAME")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
@@ -88,7 +91,11 @@ def send_message_to_telegram(message: str, error: bool = False):
 
 
 def is_working_hours():
-    current_hour = int(datetime.now().strftime("%H"))
+    """
+    Check current time in Helsinki.
+    If it's between 00:00 and 08:00, return False
+    """
+    current_hour = int(datetime.now(tz=ZoneInfo("Europe/Helsinki")).strftime("%H"))
     if 0 <= current_hour < 8:
         return False
     return True
