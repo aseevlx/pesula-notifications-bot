@@ -8,9 +8,18 @@ It is intended to be used with the [Nortec](https://vuoronvaraus.fi) laundry res
 - Get your IMAP server address and port
 - Get your email and password from your email provider
 - Create a tg bot with [BotFather](https://t.me/botfather) and get the bot token.
-- Add the bot to your group chat (or use your own id).
+- Add the bot to your group chat (or use your own id)
+- Get chat id with [What's my Telegram ID?](https://t.me/my_id_bot)
 
-# Usage
+## Env variables
+- `EMAIL_USERNAME` - your email address
+- `EMAIL_PASSWORD` - your email password
+- `IMAP_SERVER` - imap server address
+- `TG_BOT_TOKEN` - telegram bot token, get it from BotFather
+- `TG_CHAT_ID` - telegram chat id
+- `TG_ERROR_CHAT_ID` - telegram chat id for error messages from bot (you can use your own id)
+
+##  Usage
 - Build the image:
 ```shell
 docker build -t pesula-bot .
