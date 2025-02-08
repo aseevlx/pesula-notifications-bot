@@ -12,12 +12,11 @@ It is intended to be used with the [Nortec](https://vuoronvaraus.fi) laundry res
 - Get chat id with [What's my Telegram ID?](https://t.me/my_id_bot)
 
 ## Env variables
-- `EMAIL_USERNAME` - your email address
-- `EMAIL_PASSWORD` - your email password
-- `IMAP_SERVER` - imap server address
+- `API_USERNAME` - your api username
+- `API_PASSWORD` - your api password
 - `TG_BOT_TOKEN` - telegram bot token, get it from BotFather
 - `TG_CHAT_ID` - telegram chat id
-- `TG_ERROR_CHAT_ID` - telegram chat id for error messages from bot (you can use your own id)
+- `TG_ERROR_CHAT_ID` - telegram chat id for error messages
 
 ##  Usage
 - Build the image:
