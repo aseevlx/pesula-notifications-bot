@@ -4,38 +4,38 @@ This is a script that uses Telegram bot for notify you when your laundry is done
 It is intended to be used with the [Nortec](https://vuoronvaraus.fi) laundry reservation system.
 
 ## Pre-requisites
-- Setup sending notifications to your email. Gmail can't be used because it doesn't support IMAP with only password auth
-- Get your IMAP server address and port
-- Get your email and password from your email provider
+- Prepare your email and password from the Nortec website
 - Create a tg bot with [BotFather](https://t.me/botfather) and get the bot token.
 - Add the bot to your group chat (or use your own id)
 - Get chat id with [What's my Telegram ID?](https://t.me/my_id_bot)
+
 
 ## Env variables
 - `API_USERNAME` - your api username
 - `API_PASSWORD` - your api password
 - `TG_BOT_TOKEN` - telegram bot token, get it from BotFather
 - `TG_CHAT_ID` - telegram chat id
-- `TG_ERROR_CHAT_ID` - telegram chat id for error messages
+- `TG_ERROR_CHAT_ID` - telegram chat id for error messages (might be your own id if you activated your bot with /start command in TG)
 
 ##  Usage
+- Create and update .env file with your data:
+```shell
+cp env .env
+nano .env
+```
+
 - Build the image:
 ```shell
-docker build -t pesula-bot .
+docker compose build
 ```
 
 - Run:
 ```shell
-docker run -it --restart unless-stopped --name pesula-bot -d \
-    -e EMAIL_USERNAME=<your email> \
-    -e EMAIL_PASSWORD=<your password> \
-    -e IMAP_SERVER=<your imap server> \
-    -e TG_BOT_TOKEN=<your bot token> \
-    -e TG_CHAT_ID=<your chat id> \
-    -e TG_ERROR_CHAT_ID=<your error chat id> \
-    pesula-bot
+docker compose up -d
 ```
 
+- If the code is changed - just restart the container
+```
+docker compose restart
+```
 
-## Possible improvements
-- Add notification when laundry shift is starting

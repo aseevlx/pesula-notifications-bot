@@ -1,0 +1,11 @@
+services:
+  pesula-bot:
+    build: .
+    image: pesula-bot
+    container_name: pesula-bot
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+    env_file:
+      - .env

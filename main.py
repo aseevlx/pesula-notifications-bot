@@ -9,6 +9,7 @@ from api_handler import NortecApiWrapper, Message
 import config
 import logging
 
+logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 db = config.db
 
@@ -89,19 +90,18 @@ def main():
         db["session"] = api.session
 
         if not are_working_hours():
-            print("Right now the laundry room is not working, sleep for 30 minutes")
+            logger.info("Right now the laundry room is not working, sleep for 30 minutes")
             sleep(60 * 30)
             continue
 
         new_messages = get_new_messages(api)
-        if not new_messages:
-            print("No new messages, sleep for 60 seconds")
-            sleep(60)
-            continue
+        if new_messages:
+            parsed_messages = parse_messages(new_messages)
+            for message in parsed_messages.values():
+                send_message_to_telegram(f"{message['status']}: {message['message']}")
 
-        parsed_messages = parse_messages(new_messages)
-        for message in parsed_messages.values():
-            send_message_to_telegram(f"{message['status']}: {message['message']}")
+        logger.info("Sleeping for 60 seconds")
+        sleep(60)
 
 
 if __name__ == "__main__":
