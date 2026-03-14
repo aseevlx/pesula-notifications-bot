@@ -1,11 +1,12 @@
-from dataclasses import dataclass
 import pydantic
 
 
-@dataclass
 class MessageColumn(pydantic.BaseModel):
     """
-    Possible values for type (will use plain int, it's not needed in our case):
+    Represents a single column in a Nortec message row.
+
+    Type is an integer that encodes how the text should be rendered.
+    Common values:
         1 (CenterHead)
         2 (Center)
         3 (CenterBold)
@@ -21,12 +22,20 @@ class MessageColumn(pydantic.BaseModel):
     Type: int
 
 
-@dataclass
 class MessageRow(pydantic.BaseModel):
+    """
+    Represents a logical row in a Nortec message, with the full textual payload
+    stored under Columns2.
+    """
+
     Columns2: MessageColumn  # TODO: doc says it will be renamed to Columns
 
 
 class Message(pydantic.BaseModel):
+    """
+    Top-level Nortec message as returned by the API.
+    """
+
     Name: str
     Title: str
     Description: list[str]
