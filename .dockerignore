@@ -1,0 +1,37 @@
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Git metadata and CI
+.git/
+.gitignore
+.github/
+.proxyai/
+
+# Environments
+.env
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Editors / IDE
+.idea/
+.vscode/
+
+# Local data / databases
+storage.db
+*.db
+
+# Python build / packaging artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Misc
+.python-version
+*.log
+README.md

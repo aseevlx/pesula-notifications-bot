@@ -17,6 +17,14 @@ It is intended to be used with the [Nortec](https://vuoronvaraus.fi) laundry res
 - `TG_CHAT_ID` - telegram chat id
 - `TG_ERROR_CHAT_ID` - telegram chat id for error messages (might be your own id if you activated your bot with /start command in TG)
 
+Optional tuning for polling when running as a long-lived container:
+
+- `POLL_INTERVAL_SEC` - base polling interval in seconds during working hours (default: `60`)
+- `SLEEP_OUTSIDE_WORKING_HOURS_SEC` - sleep time in seconds outside working hours (default: `1800`, i.e. 30 minutes)
+- `WORKING_HOURS_START` - start of working hours (hour of day, 0-23, default: `8`)
+- `WORKING_HOURS_END` - end of working hours (hour of day, 0-23, default: `24`)
+- `MAX_POLL_INTERVAL_SEC` - maximum backoff interval when there are no new messages (default: `600`)
+
 ##  Usage
 - Create and update .env file with your data:
 ```shell
@@ -28,6 +36,14 @@ nano .env
 ```shell
 docker compose build
 ```
+
+Alternatively, you can pull a pre-built image from GitHub Container Registry (GHCR):
+
+```shell
+docker pull ghcr.io/aseevlx/pesula-notifications-bot:latest
+```
+
+Secrets (API credentials, Telegram tokens) are **not** baked into the image and must be provided via environment variables (for example using a `.env` file and `docker compose` as shown below).
 
 - Run:
 ```shell
