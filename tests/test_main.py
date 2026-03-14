@@ -42,15 +42,22 @@ def test_are_working_hours_respects_config(monkeypatch):
 
 
 def test_build_notifications_from_messages():
-    msg = make_message(
+    single = make_message(
         "test",
         status_text="Færdig",
-        device_text="Vaskemaskine 1, something else",
+        device_text="Vaskemaskine 1, Street 123 Pesula er færdig",
     )
 
-    notifications = main.build_notifications([msg])
+    multiple = make_message(
+        "test-multi",
+        status_text="Færdig",
+        device_text="Tørretumbler 4 & 6, Street 123 Pesula er færdig",
+    )
 
-    assert notifications == ["Done: Washing machine 1"]
+    notifications = main.build_notifications([single, multiple])
+
+    assert "Done: Washing machine 1" in notifications
+    assert "Done: Dryers 4 & 6" in notifications
 
 
 def test_get_new_messages_filters_seen_messages(monkeypatch):
