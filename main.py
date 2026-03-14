@@ -3,6 +3,7 @@ from datetime import datetime
 from time import sleep
 from zoneinfo import ZoneInfo
 import logging
+import re
 from typing import Iterable
 
 import requests
@@ -55,12 +56,26 @@ def parse_messages(messages: Iterable[Message]) -> dict[str, dict[str, str]]:
                 data = row.Columns2.Cells[0]
                 if "Vaskemaskine" in data:
                     start = data.find("Vaskemaskine")
-                    washing_machine = data[start:].split(",")[0]
-                    message_data[message.Name]["message"] = f"Washing machine {washing_machine[-1]}"
+                    segment = data[start:].split(",")[0]
+                    numbers = re.findall(r"\d+", segment)
+                    if not numbers:
+                        continue
+                    if len(numbers) == 1:
+                        message_data[message.Name]["message"] = f"Washing machine {numbers[0]}"
+                    else:
+                        joined = " & ".join(numbers)
+                        message_data[message.Name]["message"] = f"Washing machines {joined}"
                 elif "Tørretumbler" in data:
                     start = data.find("Tørretumbler")
-                    dryer = data[start:].split(",")[0]
-                    message_data[message.Name]["message"] = f"Dryer {dryer[-1]}"
+                    segment = data[start:].split(",")[0]
+                    numbers = re.findall(r"\d+", segment)
+                    if not numbers:
+                        continue
+                    if len(numbers) == 1:
+                        message_data[message.Name]["message"] = f"Dryer {numbers[0]}"
+                    else:
+                        joined = " & ".join(numbers)
+                        message_data[message.Name]["message"] = f"Dryers {joined}"
 
     return message_data
 
