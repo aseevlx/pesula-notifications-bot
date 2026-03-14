@@ -52,3 +52,5 @@ venv.bak/
 .idea/
 .proxyai/
 storage.db
+storage.db-shm
+storage.db-wal
