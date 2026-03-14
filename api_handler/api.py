@@ -1,4 +1,6 @@
 import time
+from typing import Any
+
 import requests
 import logging
 from .exceptions import (
@@ -14,8 +16,13 @@ logger = logging.getLogger(__name__)
 
 
 class NortecApiWrapper:
+    """
+    Thin wrapper around the Nortec HTTP API that handles session management
+    and basic error translation into Python exceptions.
+    """
+
     base_url = "https://backend.nortec1.dk"
-    session = None
+    session: str | None = None
 
     def __init__(
         self,
@@ -29,11 +36,11 @@ class NortecApiWrapper:
 
         self._validate_session()
 
-    def _get_params(self, additional_params: None | dict = None) -> dict:
+    def _get_params(self, additional_params: dict[str, Any] | None = None) -> dict[str, Any]:
         if additional_params is None:
             additional_params = {}
 
-        params = {
+        params: dict[str, Any] = {
             "App": "TUK",
             "session": self.session,
             "tick": self._get_tick(),
@@ -47,7 +54,10 @@ class NortecApiWrapper:
         return int(time.time() * 1000)
 
     @staticmethod
-    def _raise_for_response_code(response: dict) -> None:
+    def _raise_for_response_code(response: dict[str, Any]) -> None:
+        """
+        Interpret the Nortec Return code and raise an appropriate exception if needed.
+        """
         return_value = response.get("Return")
         match return_value:
             case None:
@@ -65,26 +75,35 @@ class NortecApiWrapper:
             case _:
                 return
 
-    def _check_session_update(self, session: str):
+    def _check_session_update(self, session: str) -> None:
         """
-        Session can change during the API call, this method updates used session for the next calls
+        Session can change during the API call; update it for subsequent calls.
         """
         if session != self.session:
+            logger.info("Updating Nortec session from %s to %s", self.session, session)
             self.session = session
 
-    def _make_api_call(self, endpoint: str, params: dict) -> dict:
+    def _make_api_call(self, endpoint: str, params: dict[str, Any]) -> dict[str, Any]:
+        """
+        Make a GET call to the Nortec API and handle basic response validation.
+        """
         # unfortunately, API needs `.json` without `=`, but requests doesn't allow it, so let's use this workaround
         url = f"{self.base_url}{endpoint}?.json"
         response = requests.get(url, params=params)
-        self._raise_for_response_code(response.json())
+        payload = response.json()
+
+        self._raise_for_response_code(payload)
 
         # session update check
-        if "Session" in response.json():
-            self._check_session_update(response.json()["Session"])
+        if "Session" in payload:
+            self._check_session_update(payload["Session"])
 
-        return response.json()
+        return payload
 
-    def _validate_session(self):
+    def _validate_session(self) -> None:
+        """
+        Ensure that the current session is valid; if not, perform a login.
+        """
         endpoint = "/User/Home3/"
         params = self._get_params(additional_params={"tabid": 1})
         try:
@@ -93,7 +112,7 @@ class NortecApiWrapper:
             self.session = ""
             self._login(self.username, self.password)
 
-    def _login(self, username: str, password: str):
+    def _login(self, username: str, password: str) -> None:
         endpoint = "/User/Login4/"
         params = self._get_params(
             {
@@ -109,6 +128,9 @@ class NortecApiWrapper:
             raise ValueError("Session not found in login response")
 
     def get_messages(self) -> list[Message]:
+        """
+        Fetch the current list of Nortec messages.
+        """
         endpoint = "/User/Messages1/"
         params = self._get_params()
         response = self._make_api_call(endpoint, params)
