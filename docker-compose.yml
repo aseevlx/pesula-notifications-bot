@@ -1,11 +1,10 @@
 services:
   pesula-bot:
-    build: .
-    image: pesula-bot
+    image: ghcr.io/aseevlx/pesula-notifications-bot:latest
     container_name: pesula-bot
     restart: unless-stopped
     working_dir: /app
-    volumes:
-      - .:/app
     env_file:
       - .env
+    volumes:
+      - ./storage.db:/app/storage.db
