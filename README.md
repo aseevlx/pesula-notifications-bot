@@ -55,11 +55,6 @@ docker compose up -d
 docker compose restart
 ```
 
-The container runs as a non-root user with UID 1000, so `storage.db` on the host must be writable by it:
-```shell
-sudo chown 1000:1000 storage.db
-```
-
 ## Development
 Direct dependencies are listed in `requirements.in` and `requirements-dev.in`. The `.txt` files pin all packages, including indirect ones, and are generated with [uv](https://docs.astral.sh/uv/):
 ```shell

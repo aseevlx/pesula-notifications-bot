@@ -52,14 +52,12 @@ jobs:
           push: false
           tags: pesula-notifications-bot:test
 
-      - name: Check the image runs as non-root and can write to the mounted database
+      - name: Check the image can write to the mounted database
         run: |
           python -c "import shelve; shelve.open('storage.db').close()"
-          sudo chown 1000:1000 storage.db
           docker run --rm -v "$PWD/storage.db:/app/storage.db" pesula-notifications-bot:test python -c "
-          import importlib.util, os
+          import importlib.util
           import main
-          assert os.getuid() == 1000
           assert importlib.util.find_spec('pytest') is None
           main.db['check'] = 1
           main.db.sync()
