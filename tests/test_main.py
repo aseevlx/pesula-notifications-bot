@@ -82,6 +82,64 @@ def test_get_new_messages_filters_seen_messages(monkeypatch):
     assert len(second_call) == 0
 
 
+def test_filter_repeated_notifications_stays_quiet_during_reminders(monkeypatch):
+    clock = {"now": 0.0}
+    monkeypatch.setattr(main, "time", lambda: clock["now"])
+    monkeypatch.setattr(main, "db", {})
+    monkeypatch.setattr(main.config, "REPEAT_NOTIFICATION_WINDOW_SEC", 1800, raising=False)
+
+    assert main.filter_repeated_notifications(["Done: Dryer 2"]) == ["Done: Dryer 2"]
+
+    # Reminders every 2 minutes for 2 hours: longer than the window, but each one restarts it
+    for _ in range(60):
+        clock["now"] += 120
+        assert main.filter_repeated_notifications(["Done: Dryer 2"]) == []
+
+    # Another machine isn't affected
+    assert main.filter_repeated_notifications(["Done: Dryer 4"]) == ["Done: Dryer 4"]
+
+    # Same machine again after the window has passed is a new load
+    clock["now"] += 1800
+    assert main.filter_repeated_notifications(["Done: Dryer 2"]) == ["Done: Dryer 2"]
+
+
+def test_filter_repeated_notifications_collapses_backlog_in_one_poll(monkeypatch):
+    monkeypatch.setattr(main, "time", lambda: 0.0)
+    monkeypatch.setattr(main, "db", {})
+    monkeypatch.setattr(main.config, "REPEAT_NOTIFICATION_WINDOW_SEC", 1800, raising=False)
+
+    backlog = ["Done: Dryer 2"] * 10 + ["Done: Washing machines 1 & 3"] + ["Done: Dryers 2 & 4"] * 4
+
+    assert main.filter_repeated_notifications(backlog) == [
+        "Done: Dryer 2",
+        "Done: Washing machines 1 & 3",
+        "Done: Dryers 2 & 4",
+    ]
+
+
+def test_run_iteration_sends_one_notification_for_repeated_reminders(monkeypatch):
+    class DummyApi:
+        session = "abc"
+
+        def __init__(self):
+            self.messages = []
+
+        def get_messages(self):
+            return self.messages
+
+    sent = []
+    monkeypatch.setattr(main, "are_working_hours", lambda: True)
+    monkeypatch.setattr(main, "db", {})
+    monkeypatch.setattr(main, "send_message_to_telegram", sent.append)
+
+    api = DummyApi()
+    for name in ("m1", "m2", "m3"):
+        api.messages = [make_message(name, "Færdig", "Tørretumbler 2, Street 123 Pesula er færdig")]
+        main.run_iteration(api, 60)
+
+    assert sent == ["Done: Dryer 2"]
+
+
 def test_run_iteration_backoff_behavior(monkeypatch):
     # Start with no new messages to trigger backoff
     def fake_get_new_messages(api):

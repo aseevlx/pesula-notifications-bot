@@ -24,6 +24,7 @@ Optional tuning for polling when running as a long-lived container:
 - `WORKING_HOURS_START` - start of working hours (hour of day, 0-23, default: `8`)
 - `WORKING_HOURS_END` - end of working hours (hour of day, 0-23, default: `24`)
 - `MAX_POLL_INTERVAL_SEC` - maximum backoff interval when there are no new messages (default: `600`)
+- `REPEAT_NOTIFICATION_WINDOW_SEC` - ignore a notification if the same one was seen within this many seconds, so repeated reminders only notify once (default: `1800`, i.e. 30 minutes)
 
 ##  Usage
 - Create and update .env file with your data:

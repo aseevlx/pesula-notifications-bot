@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-from time import sleep
+from time import sleep, time
 from zoneinfo import ZoneInfo
 import logging
 import re
@@ -96,6 +96,27 @@ def build_notifications(messages: Iterable[Message]) -> list[str]:
     return notifications
 
 
+def filter_repeated_notifications(notifications: Iterable[str]) -> list[str]:
+    """
+    Drop notifications that repeat one seen within REPEAT_NOTIFICATION_WINDOW_SEC.
+
+    Nortec keeps sending reminders until the laundry is collected, each with a new message name.
+    Every repeat restarts the window, so a long series of reminders only notifies once.
+    """
+    now = time()
+    last_seen: dict[str, float] = db.get("last_seen_notifications", {})
+    filtered: list[str] = []
+
+    for notification in notifications:
+        previous = last_seen.get(notification)
+        if previous is None or now - previous >= config.REPEAT_NOTIFICATION_WINDOW_SEC:
+            filtered.append(notification)
+        last_seen[notification] = now
+
+    db["last_seen_notifications"] = last_seen
+    return filtered
+
+
 def send_message_to_telegram(message: str, error: bool = False) -> requests.Response:
     """
     Send a message to Telegram. When error=True, send it to the error chat with a prefix.
@@ -139,7 +160,7 @@ def run_iteration(api: NortecApiWrapper, poll_interval: int) -> tuple[int, bool]
 
     new_messages = get_new_messages(api)
     if new_messages:
-        notifications = build_notifications(new_messages)
+        notifications = filter_repeated_notifications(build_notifications(new_messages))
         for notification in notifications:
             send_message_to_telegram(notification)
         next_interval = config.POLL_INTERVAL_SEC
