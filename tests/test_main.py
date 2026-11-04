@@ -82,6 +82,42 @@ def test_get_new_messages_filters_seen_messages(monkeypatch):
     assert len(second_call) == 0
 
 
+def test_run_iteration_backoff_behavior(monkeypatch):
+    # Start with no new messages to trigger backoff
+    def fake_get_new_messages(api):
+        return []
+
+    monkeypatch.setattr(main, "get_new_messages", fake_get_new_messages)
+
+    # Stub out notifications
+    monkeypatch.setattr(main, "build_notifications", lambda messages: [])
+
+    # Fake api with session attribute
+    api = types.SimpleNamespace(session="abc")
+    monkeypatch.setattr(main, "db", {})
+
+    base = 10
+    max_interval = 40
+    monkeypatch.setattr(main.config, "POLL_INTERVAL_SEC", base, raising=False)
+    monkeypatch.setattr(main.config, "MAX_POLL_INTERVAL_SEC", max_interval, raising=False)
+
+    interval = base
+    # First iteration: 10 -> 20
+    interval, outside = main.run_iteration(api, interval)
+    assert outside is False
+    assert interval == 20
+
+    # Second: 20 -> 40
+    interval, outside = main.run_iteration(api, interval)
+    assert outside is False
+    assert interval == 40
+
+    # Third: 40 -> capped at 40
+    interval, outside = main.run_iteration(api, interval)
+    assert outside is False
+    assert interval == max_interval
+
+
 def test_filter_repeated_notifications_stays_quiet_during_reminders(monkeypatch):
     clock = {"now": 0.0}
     monkeypatch.setattr(main, "time", lambda: clock["now"])
@@ -138,39 +174,3 @@ def test_run_iteration_sends_one_notification_for_repeated_reminders(monkeypatch
         main.run_iteration(api, 60)
 
     assert sent == ["Done: Dryer 2"]
-
-
-def test_run_iteration_backoff_behavior(monkeypatch):
-    # Start with no new messages to trigger backoff
-    def fake_get_new_messages(api):
-        return []
-
-    monkeypatch.setattr(main, "get_new_messages", fake_get_new_messages)
-
-    # Stub out notifications
-    monkeypatch.setattr(main, "build_notifications", lambda messages: [])
-
-    # Fake api with session attribute
-    api = types.SimpleNamespace(session="abc")
-    monkeypatch.setattr(main, "db", {})
-
-    base = 10
-    max_interval = 40
-    monkeypatch.setattr(main.config, "POLL_INTERVAL_SEC", base, raising=False)
-    monkeypatch.setattr(main.config, "MAX_POLL_INTERVAL_SEC", max_interval, raising=False)
-
-    interval = base
-    # First iteration: 10 -> 20
-    interval, outside = main.run_iteration(api, interval)
-    assert outside is False
-    assert interval == 20
-
-    # Second: 20 -> 40
-    interval, outside = main.run_iteration(api, interval)
-    assert outside is False
-    assert interval == 40
-
-    # Third: 40 -> capped at 40
-    interval, outside = main.run_iteration(api, interval)
-    assert outside is False
-    assert interval == max_interval
