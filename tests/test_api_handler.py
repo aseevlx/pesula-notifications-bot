@@ -1,3 +1,4 @@
+import pydantic
 import pytest
 
 from api_handler.api import NortecApiWrapper
@@ -75,3 +76,53 @@ def test_get_messages_parses_sections(monkeypatch):
 
     assert len(messages) == 1
     assert messages[0].Name == "n1"
+
+
+def test_get_messages_skips_sections_without_name(monkeypatch):
+    def fake_make_api_call(self, endpoint, params):
+        return {
+            "Sections": [
+                {
+                    "Title": "Send en test besked",
+                    "Description": [],
+                    "Rows": [{"Tab": {"Text": "Send", "Pos": 1, "Sure": False}}],
+                    "Collapsed": False,
+                },
+                {
+                    "Name": "n1",
+                    "Title": "t1",
+                    "Description": [],
+                    "Rows": [{"Columns2": {"Cells": ["Færdig"], "Type": 11}}],
+                    "Collapsed": False,
+                },
+            ]
+        }
+
+    monkeypatch.setattr(NortecApiWrapper, "_make_api_call", fake_make_api_call)
+
+    wrapper = NortecApiWrapper(username="user", password="pass", session="sess")
+    messages = wrapper.get_messages()
+
+    assert [message.Name for message in messages] == ["n1"]
+
+
+def test_get_messages_raises_on_named_section_with_unknown_format(monkeypatch):
+    def fake_make_api_call(self, endpoint, params):
+        return {
+            "Sections": [
+                {
+                    "Name": "n1",
+                    "Title": "t1",
+                    "Description": [],
+                    "Rows": [{"Columns": {"Cells": ["Færdig"], "Type": 11}}],
+                    "Collapsed": False,
+                },
+            ]
+        }
+
+    monkeypatch.setattr(NortecApiWrapper, "_make_api_call", fake_make_api_call)
+
+    wrapper = NortecApiWrapper(username="user", password="pass", session="sess")
+
+    with pytest.raises(pydantic.ValidationError):
+        wrapper.get_messages()

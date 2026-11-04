@@ -134,5 +134,6 @@ class NortecApiWrapper:
         endpoint = "/User/Messages1/"
         params = self._get_params()
         response = self._make_api_call(endpoint, params)
-        messages = [Message(**section) for section in response["Sections"]]
+        # Sections without a Name are UI elements (e.g. the "send a test message" buttons), not messages
+        messages = [Message(**section) for section in response["Sections"] if "Name" in section]
         return messages
