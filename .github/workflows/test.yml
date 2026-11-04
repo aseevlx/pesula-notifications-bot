@@ -17,18 +17,52 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install --no-cache-dir -r requirements.txt
+        run: pip install --no-cache-dir -r requirements-dev.txt
 
       - name: Run pytest
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: pytest
+
+  image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          push: false
+          tags: pesula-notifications-bot:test
+
+      - name: Check the image runs as non-root and can write to the mounted database
+        run: |
+          python -c "import shelve; shelve.open('storage.db').close()"
+          sudo chown 1000:1000 storage.db
+          docker run --rm -v "$PWD/storage.db:/app/storage.db" pesula-notifications-bot:test python -c "
+          import importlib.util, os
+          import main
+          assert os.getuid() == 1000
+          assert importlib.util.find_spec('pytest') is None
+          main.db['check'] = 1
+          main.db.sync()
+          assert main.db['check'] == 1
+          "
 
