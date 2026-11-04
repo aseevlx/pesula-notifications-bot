@@ -56,3 +56,16 @@ docker compose up -d
 docker compose restart
 ```
 
+## Development
+Direct dependencies are listed in `requirements.in` and `requirements-dev.in`. The `.txt` files pin all packages, including indirect ones, and are generated with [uv](https://docs.astral.sh/uv/):
+```shell
+uv pip compile requirements.in -o requirements.txt --python-version 3.13
+uv pip compile requirements-dev.in -o requirements-dev.txt --python-version 3.13
+```
+
+Pass `--upgrade` to update the pinned indirect dependencies too. Run the tests with:
+```shell
+pip install -r requirements-dev.txt
+pytest
+```
+

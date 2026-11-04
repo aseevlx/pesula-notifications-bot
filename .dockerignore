@@ -35,3 +35,9 @@ dist/
 .python-version
 *.log
 README.md
+
+# Development only
+tests/
+requirements.in
+requirements-dev.in
+requirements-dev.txt
