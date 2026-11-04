@@ -2,6 +2,7 @@ import types
 from datetime import datetime
 
 import pytest
+import requests
 
 import main
 from api_handler import Message, MessageRow, MessageColumn
@@ -80,6 +81,23 @@ def test_get_new_messages_filters_seen_messages(monkeypatch):
 
     assert len(first_call) == 1
     assert len(second_call) == 0
+
+
+def test_telegram_failure_does_not_expose_bot_token(monkeypatch):
+    def fake_get(url, params, timeout):
+        assert timeout == main.REQUEST_TIMEOUT_SEC
+        # Same format as a real requests error: the URL is part of the message
+        raise requests.ConnectionError(f"Max retries exceeded with url: {url}")
+
+    monkeypatch.setattr(main.config, "tg_base_url", "https://api.telegram.org/botS3CRET", raising=False)
+    monkeypatch.setattr(main.requests, "get", fake_get)
+
+    with pytest.raises(main.TelegramRequestException) as exc_info:
+        main.send_message_to_telegram("hello")
+
+    assert "S3CRET" not in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
+    assert exc_info.value.__suppress_context__ is True
 
 
 def test_run_iteration_backoff_behavior(monkeypatch):

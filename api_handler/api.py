@@ -9,10 +9,13 @@ from .exceptions import (
     NortecApiCorruptedSessionException,
     NortecApiSessionExpiredException,
     NortecApiLogicException,
+    NortecApiRequestException,
 )
 from .models import Message
 
 logger = logging.getLogger(__name__)
+
+REQUEST_TIMEOUT_SEC = 30
 
 
 class NortecApiWrapper:
@@ -80,7 +83,7 @@ class NortecApiWrapper:
         Session can change during the API call; update it for subsequent calls.
         """
         if session != self.session:
-            logger.info("Updating Nortec session from %s to %s", self.session, session)
+            logger.info("Updating Nortec session")
             self.session = session
 
     def _make_api_call(self, endpoint: str, params: dict[str, Any]) -> dict[str, Any]:
@@ -89,8 +92,12 @@ class NortecApiWrapper:
         """
         # unfortunately, API needs `.json` without `=`, but requests doesn't allow it, so let's use this workaround
         url = f"{self.base_url}{endpoint}?.json"
-        response = requests.get(url, params=params)
-        payload = response.json()
+        try:
+            response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT_SEC)
+            payload = response.json()
+        except requests.RequestException as e:
+            # The original message contains the URL with the password and session, so don't propagate it
+            raise NortecApiRequestException(f"Nortec request to {endpoint} failed: {type(e).__name__}") from None
 
         self._raise_for_response_code(payload)
 

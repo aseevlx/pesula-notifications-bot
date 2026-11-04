@@ -1,6 +1,8 @@
 import pydantic
 import pytest
+import requests
 
+from api_handler import api as api_module
 from api_handler.api import NortecApiWrapper
 from api_handler.exceptions import (
     NortecApiApplicationException,
@@ -8,6 +10,7 @@ from api_handler.exceptions import (
     NortecApiCorruptedSessionException,
     NortecApiSessionExpiredException,
     NortecApiLogicException,
+    NortecApiRequestException,
 )
 from api_handler.models import Message, MessageRow, MessageColumn
 
@@ -49,6 +52,69 @@ def test_validate_session_triggers_login_on_expired_session(monkeypatch):
     wrapper = NortecApiWrapper(username="user", password="pass", session="old")
     assert wrapper.username == "user"
     assert calls["login"] == 1
+
+
+def test_request_failure_does_not_expose_credentials(monkeypatch):
+    def fake_get(url, params, timeout):
+        # Same format as a real requests error: the query string is part of the message
+        raise requests.ConnectionError(f"Max retries exceeded with url: {url}&password={params['password']}")
+
+    monkeypatch.setattr(NortecApiWrapper, "_validate_session", lambda self: None)
+    monkeypatch.setattr(api_module.requests, "get", fake_get)
+
+    wrapper = NortecApiWrapper(username="user", password="s3cret", session="sess")
+
+    with pytest.raises(NortecApiRequestException) as exc_info:
+        wrapper._login("user", "s3cret")
+
+    assert "s3cret" not in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
+    assert exc_info.value.__suppress_context__ is True
+
+
+def test_invalid_json_response_raises_request_exception(monkeypatch):
+    class FakeResponse:
+        def json(self):
+            raise requests.JSONDecodeError("Expecting value", "<html>", 0)
+
+    monkeypatch.setattr(NortecApiWrapper, "_validate_session", lambda self: None)
+    monkeypatch.setattr(api_module.requests, "get", lambda url, params, timeout: FakeResponse())
+
+    wrapper = NortecApiWrapper(username="user", password="pass", session="sess")
+
+    with pytest.raises(NortecApiRequestException):
+        wrapper.get_messages()
+
+
+def test_requests_use_timeout(monkeypatch):
+    seen = {}
+
+    class FakeResponse:
+        def json(self):
+            return {"Return": 100, "Sections": []}
+
+    def fake_get(url, params, timeout):
+        seen["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(NortecApiWrapper, "_validate_session", lambda self: None)
+    monkeypatch.setattr(api_module.requests, "get", fake_get)
+
+    NortecApiWrapper(username="user", password="pass", session="sess").get_messages()
+
+    assert seen["timeout"] == api_module.REQUEST_TIMEOUT_SEC
+
+
+def test_session_token_is_not_logged(monkeypatch, caplog):
+    monkeypatch.setattr(NortecApiWrapper, "_validate_session", lambda self: None)
+    wrapper = NortecApiWrapper(username="user", password="pass", session="old-token")
+
+    with caplog.at_level("INFO"):
+        wrapper._check_session_update("new-token")
+
+    assert wrapper.session == "new-token"
+    assert "old-token" not in caplog.text
+    assert "new-token" not in caplog.text
 
 
 def test_get_messages_parses_sections(monkeypatch):

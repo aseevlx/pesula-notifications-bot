@@ -15,6 +15,12 @@ logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(
 logger = logging.getLogger(__name__)
 db = config.db
 
+REQUEST_TIMEOUT_SEC = 30
+
+
+class TelegramRequestException(Exception):
+    pass
+
 
 def get_new_messages(api: NortecApiWrapper) -> list[Message]:
     """
@@ -105,7 +111,12 @@ def send_message_to_telegram(message: str, error: bool = False) -> requests.Resp
         payload["chat_id"] = config.tg_error_chat_id
         payload["text"] = f"Pesula bot error: {message}"
 
-    response = requests.get(f"{config.tg_base_url}/sendMessage", params=payload)
+    try:
+        response = requests.get(f"{config.tg_base_url}/sendMessage", params=payload, timeout=REQUEST_TIMEOUT_SEC)
+    except requests.RequestException as e:
+        # The original message contains the URL with the bot token, so don't propagate it
+        raise TelegramRequestException(f"Telegram request failed: {type(e).__name__}") from None
+
     logger.info("Telegram response status: %s", response.status_code)
     return response
 
